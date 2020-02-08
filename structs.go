@@ -4,10 +4,10 @@ import "github.com/google/uuid"
 
 // IBeaconAdvertisement is a structure holding data from iBeacon advertisement
 type IBeaconAdvertisement struct {
-	calibratedRssi int8
-	proximityUUID  uuid.UUID
-	major          uint16
-	minor          uint16
+	CalibratedRssi int8
+	ProximityUUID  uuid.UUID
+	Major          uint16
+	Minor          uint16
 }
 
 // KontaktIOScanResponse is a structure holding data from older Kontakt.io beacon's Scan Response
