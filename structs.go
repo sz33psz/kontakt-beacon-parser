@@ -12,42 +12,43 @@ type IBeaconAdvertisement struct {
 
 // KontaktIOScanResponse is a structure holding data from older Kontakt.io beacon's Scan Response
 type KontaktIOScanResponse struct {
-	name            string
-	txPower         uint8
-	firmware        string
-	batteryLevel    uint8
-	uniqueID        string
-	shuffledIBeacon IBeaconAdvertisement
+	Name            string
+	TxPower         uint8
+	Firmware        string
+	BatteryLevel    uint8
+	UniqueID        string
+	ShuffledIBeacon IBeaconAdvertisement
 }
 
 // KontaktPlainAdvertisement is a structure holding data from Kontakt.io Secure Profile plain advertisement
 // Secure profile is described here: https://developer.kontakt.io/hardware/packets/secureprofile/
 type KontaktPlainAdvertisement struct {
-	deviceModel   uint8
-	firmwareMajor uint8
-	firmwareMinor uint8
-	batteryLevel  uint8
-	uniqueID      string
+	DeviceModel   uint8
+	FirmwareMajor uint8
+	FirmwareMinor uint8
+	BatteryLevel  uint8
+	TxPower       int8
+	UniqueID      string
 }
 
 // KontaktShuffledAdvertisement is a structure holding data from Kontakt.io Secure Profile shuffled advertisement
 type KontaktShuffledAdvertisement struct {
-	deviceModel         uint8
-	firmwareMajor       uint8
-	firmwareMinor       uint8
-	batteryLevel        uint8
-	eddystoneNamespace  []byte
-	eddystoneInstanceID []byte
+	DeviceModel         uint8
+	FirmwareMajor       uint8
+	FirmwareMinor       uint8
+	BatteryLevel        uint8
+	EddystoneNamespace  []byte
+	EddystoneInstanceID []byte
 }
 
 // KontaktLocationAdvertisement is a structure holding data from Kontakt.io Location advertisement
 // Location advertisement is described here: https://developer.kontakt.io/hardware/packets/location/
 type KontaktLocationAdvertisement struct {
-	txPower     int8
-	bleChannel  uint8
-	deviceModel uint8
-	flags       uint8
-	uniqueID    string
+	TxPower     int8
+	BleChannel  uint8
+	DeviceModel uint8
+	Flags       uint8
+	UniqueID    string
 }
 
 // TelemetryPID is an identifier of telemetry field.
@@ -94,5 +95,5 @@ type KontaktTelemetryValue struct {
 
 // KontaktTelemetryAdvertisement is describing contents of a Kontakt.io telemetry advertisement
 type KontaktTelemetryAdvertisement struct {
-	values []KontaktTelemetryValue
+	Values []KontaktTelemetryValue
 }

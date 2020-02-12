@@ -9,9 +9,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type DetectedType int
+
 const (
 	// Unknown - packet of not known origin, that doesn't match any of the supported ones
-	Unknown = iota
+	Unknown DetectedType = iota
 	// IBeacon - iBeacon packet
 	IBeacon
 	// EddystoneUID - Eddystone's UID packet
@@ -41,7 +43,10 @@ var (
 )
 
 var (
-	ErrInvalidPreamble = errors.New("Invalid preamble")
+	ErrInvalidPreamble                 = errors.New("invalid preamble")
+	ErrInvalidKontaktPayloadIdentifier = errors.New("invalid kontakt payload identidier")
+	ErrNotImplemented                  = errors.New("packet not supported yet")
+	ErrInvalidLength                   = errors.New("packet has invalid length")
 )
 
 var (
@@ -55,7 +60,7 @@ var (
 
 type Parser struct {
 	buf          *bytes.Buffer
-	DetectedType int
+	DetectedType DetectedType
 	Flags        byte
 	Parsed       interface{}
 }
@@ -80,15 +85,27 @@ func (p *Parser) Parse() error {
 			if len(section) != ibeaconLength {
 				continue
 			}
-			if ibeacon, err := parseIBeacon(section); err == nil {
-				p.Parsed = ibeacon
-			} else if err == ErrInvalidPreamble {
+			if err = p.parseIBeacon(section); err == ErrInvalidPreamble {
 				continue
-			} else {
+			} else if err != nil {
 				return err
 			}
 		case serviceDataDataType:
-
+			if p.buf.Len() < 2 {
+				return io.EOF
+			}
+			uuid := p.buf.Next(2)
+			if bytes.Equal(uuid, kontaktUUID) {
+				if err := p.parseKontaktAdv(section); err != nil {
+					return err
+				}
+			} else if bytes.Equal(uuid, eddystoneUUID) {
+				if err := p.parseEddystone(section); err != nil {
+					return err
+				}
+			} else {
+				continue
+			}
 		default:
 			continue
 		}
@@ -119,21 +136,82 @@ func (p *Parser) nextSection() (byte, []byte, error) {
 	return typ, sectionData, nil
 }
 
-func parseIBeacon(section []byte) (*IBeaconAdvertisement, error) {
+func (p *Parser) parseIBeacon(section []byte) error {
 	if !bytes.Equal(section[0:4], ibeaconManufacturerConstData) {
-		return nil, ErrInvalidPreamble
+		return ErrInvalidPreamble
 	}
 	proximity, err := uuid.FromBytes(section[4:20])
 	if err != nil {
-		return nil, err
+		return err
 	}
 	major := section[20:22]
 	minor := section[22:24]
 	rssi := section[24]
-	return &IBeaconAdvertisement{
+
+	p.Parsed = &IBeaconAdvertisement{
 		CalibratedRssi: int8(rssi),
 		ProximityUUID:  proximity,
 		Major:          binary.LittleEndian.Uint16(major),
 		Minor:          binary.LittleEndian.Uint16(minor),
-	}, nil
+	}
+	p.DetectedType = IBeacon
+	return nil
+}
+
+func (p *Parser) parseKontaktAdv(section []byte) error {
+	if len(section) < 3 {
+		return io.EOF
+	}
+	var err error
+	switch section[2] {
+	case 0x01:
+		err = p.parseKontaktShuffled(section)
+	case 0x02:
+		err = p.parseKontaktPlain(section)
+	case 0x03:
+		err = p.parseKontaktTelemetry(section)
+	case 0x05:
+		err = p.parseKontaktLocation(section)
+	default:
+		return ErrInvalidKontaktPayloadIdentifier
+	}
+	return err
+}
+
+func (p *Parser) parseKontaktPlain(section []byte) error {
+	if len(section) < 9 {
+		return nil
+	}
+	deviceModel := section[3]
+	fwMajor := section[4]
+	fwMinor := section[5]
+	battery := section[6]
+	txPower := section[7]
+	uniqueID := string(section[8:])
+	p.Parsed = &KontaktPlainAdvertisement{
+		DeviceModel:   uint8(deviceModel),
+		FirmwareMajor: uint8(fwMajor),
+		FirmwareMinor: uint8(fwMinor),
+		BatteryLevel:  uint8(battery),
+		TxPower:       int8(txPower),
+		UniqueID:      uniqueID,
+	}
+	p.DetectedType = KontaktPlain
+	return nil
+}
+
+func (p *Parser) parseKontaktShuffled(section []byte) error {
+	return ErrNotImplemented
+}
+
+func (p *Parser) parseKontaktTelemetry(section []byte) error {
+	return ErrNotImplemented
+}
+
+func (p *Parser) parseKontaktLocation(section []byte) error {
+	return ErrNotImplemented
+}
+
+func (p *Parser) parseEddystone(section []byte) error {
+	return ErrNotImplemented
 }

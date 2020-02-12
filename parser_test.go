@@ -16,6 +16,7 @@ func TestParseIBeacon(t *testing.T) {
 
 	parser := New(bytes)
 	assert.Nil(t, parser.Parse())
+	assert.Equal(t, parser.DetectedType, IBeacon)
 	if adv, ok := parser.Parsed.(*IBeaconAdvertisement); !ok {
 		t.Errorf("Parsing of iBeacon should result in IBeaconAdvertisement")
 	} else {
