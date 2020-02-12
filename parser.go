@@ -91,10 +91,10 @@ func (p *Parser) Parse() error {
 				return err
 			}
 		case serviceDataDataType:
-			if p.buf.Len() < 2 {
+			if len(section) < 2 {
 				return io.EOF
 			}
-			uuid := p.buf.Next(2)
+			uuid := section[0:2]
 			if bytes.Equal(uuid, kontaktUUID) {
 				if err := p.parseKontaktAdv(section); err != nil {
 					return err
