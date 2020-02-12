@@ -16,7 +16,7 @@ func TestParseIBeacon(t *testing.T) {
 	}
 
 	parser := New(bytes)
-	assert.Nil(t, parser.Parse())
+	assert.Nil(t, parser.ParseAdvertisement())
 	assert.Equal(t, parser.DetectedType, IBeacon)
 	if adv, ok := parser.Parsed.(*IBeaconAdvertisement); !ok {
 		t.Errorf("Parsing of iBeacon should result in IBeaconAdvertisement")
@@ -34,7 +34,7 @@ func TestParseIBeaconInvalidPreamble(t *testing.T) {
 	}
 
 	parser := New(bytes)
-	assert.Nil(t, parser.Parse())
+	assert.Nil(t, parser.ParseAdvertisement())
 	assert.Equal(t, parser.DetectedType, Unknown)
 }
 func TestParseIBeaconSmallerFrameLength(t *testing.T) {
@@ -44,7 +44,7 @@ func TestParseIBeaconSmallerFrameLength(t *testing.T) {
 	}
 
 	parser := New(bytes)
-	assert.Nil(t, parser.Parse())
+	assert.Nil(t, parser.ParseAdvertisement())
 	assert.Equal(t, parser.DetectedType, Unknown)
 }
 
@@ -54,7 +54,17 @@ func TestParseTooShortIBeacon(t *testing.T) {
 		t.Fail()
 	}
 	parser := New(bytes)
-	assert.Equal(t, io.EOF, parser.Parse())
+	assert.Equal(t, io.EOF, parser.ParseAdvertisement())
+	assert.Equal(t, Unknown, parser.DetectedType)
+}
+
+func TestParseKontaktInvalidType(t *testing.T) {
+	bytes, err := hex.DecodeString("0F166AFEFF06010F6404616263646566")
+	if err != nil {
+		t.Fail()
+	}
+	parser := New(bytes)
+	assert.Equal(t, ErrInvalidKontaktPayloadIdentifier, parser.ParseAdvertisement())
 	assert.Equal(t, Unknown, parser.DetectedType)
 }
 
@@ -64,7 +74,7 @@ func TestParseKontaktPlain(t *testing.T) {
 		t.Fail()
 	}
 	parser := New(bytes)
-	assert.Nil(t, parser.Parse())
+	assert.Nil(t, parser.ParseAdvertisement())
 	assert.Equal(t, KontaktPlain, parser.DetectedType)
 	if adv, ok := parser.Parsed.(*KontaktPlainAdvertisement); !ok {
 		t.Errorf("Parsing of iBeacon should result in KontaktPlainAdvertisement")
@@ -75,4 +85,14 @@ func TestParseKontaktPlain(t *testing.T) {
 		assert.Equal(t, uint8(6), adv.DeviceModel)
 		assert.Equal(t, "abcdef", adv.UniqueID)
 	}
+}
+
+func TestParseScanResponse(t *testing.T) {
+	bytes, err := hex.DecodeString("080961626364656667020A040A160DD061626364040264")
+	if err != nil {
+		t.Fail()
+	}
+	parser := New(bytes)
+	assert.Nil(t, parser.ParseScanResponse())
+	assert.Equal(t, KontaktScanResponse, parser.DetectedType)
 }

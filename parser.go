@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/google/uuid"
@@ -50,12 +51,15 @@ var (
 )
 
 var (
+	flagsDataType                byte = 0x01
+	completeNameType             byte = 0x09
+	txPowerType                  byte = 0x0A
 	serviceDataDataType          byte = 0x16
 	manufacturerDataType         byte = 0xFF
-	flagsDataType                byte = 0x01
 	ibeaconManufacturerConstData      = []byte{0x4C, 0x00, 0x02, 0x15}
 	kontaktUUID                       = []byte{0x6A, 0xFE}
 	eddystoneUUID                     = []byte{0xAA, 0xFE}
+	kontaktScanResponseUUID           = []byte{0x0D, 0xD0}
 )
 
 type Parser struct {
@@ -72,7 +76,39 @@ func New(adv []byte) Parser {
 	}
 }
 
-func (p *Parser) Parse() error {
+func (p *Parser) ParseScanResponse() error {
+	correctScanResponse := false
+	scanResponse := KontaktIOScanResponse{}
+	for p.buf.Len() > 0 {
+		typ, section, err := p.nextSection()
+		if err != nil {
+			return err
+		}
+		switch typ {
+		case completeNameType:
+			scanResponse.Name = string(section)
+			correctScanResponse = true
+		case txPowerType:
+			scanResponse.TxPower = uint8(section[0])
+			correctScanResponse = true
+		case serviceDataDataType:
+			if !bytes.Equal(section[0:2], kontaktScanResponseUUID) || len(section) != 9 {
+				continue
+			}
+			scanResponse.UniqueID = string(section[2:6])
+			scanResponse.Firmware = fmt.Sprintf("%v.%v", section[6], section[7])
+			scanResponse.BatteryLevel = uint8(section[8])
+			correctScanResponse = true
+		}
+	}
+	if correctScanResponse {
+		p.Parsed = &scanResponse
+		p.DetectedType = KontaktScanResponse
+	}
+	return nil
+}
+
+func (p *Parser) ParseAdvertisement() error {
 	for p.buf.Len() > 0 {
 		typ, section, err := p.nextSection()
 		if err != nil {
