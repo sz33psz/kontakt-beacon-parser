@@ -55,7 +55,7 @@ type KontaktLocationAdvertisement struct {
 }
 
 // TelemetryPID is an identifier of telemetry field.
-type TelemetryPID uint16
+type TelemetryPID uint8
 
 const (
 	// SystemHealth - grouped field https://developer.kontakt.io/hardware/packets/telemetry/#system-health-beacon
@@ -92,11 +92,11 @@ const (
 
 // KontaktTelemetryValue is a container for storing single value of telemetry data
 type KontaktTelemetryValue struct {
-	PID   uint16
-	value []byte
+	PID   TelemetryPID
+	Value []byte
 }
 
 // KontaktTelemetryAdvertisement is describing contents of a Kontakt.io telemetry advertisement
 type KontaktTelemetryAdvertisement struct {
-	Values []KontaktTelemetryValue
+	Fields []KontaktTelemetryValue
 }

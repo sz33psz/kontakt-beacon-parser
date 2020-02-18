@@ -237,7 +237,31 @@ func (p *Parser) parseKontaktShuffled(section []byte) error {
 }
 
 func (p *Parser) parseKontaktTelemetry(section []byte) error {
-	return ErrNotImplemented
+	fields := make([]KontaktTelemetryValue, 0)
+	buf := bytes.NewBuffer(section[3:])
+	for buf.Len() != 0 {
+		len, err := buf.ReadByte()
+		if err != nil || buf.Len() < int(len) {
+			return io.EOF
+		}
+		pid, err := buf.ReadByte()
+		if err != nil {
+			return err
+		}
+		value := make([]byte, len-1)
+		if n, err := buf.Read(value); err != nil {
+			return err
+		} else if n != int(len)-1 {
+			return io.EOF
+		}
+		fields = append(fields, KontaktTelemetryValue{
+			PID:   TelemetryPID(pid),
+			Value: value,
+		})
+	}
+	p.Parsed = &KontaktTelemetryAdvertisement{Fields: fields}
+	p.DetectedType = KontaktTelemetry
+	return nil
 }
 
 func (p *Parser) parseKontaktLocation(section []byte) error {

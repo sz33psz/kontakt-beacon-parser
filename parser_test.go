@@ -172,3 +172,54 @@ func TestParseLocationFrameTooShort(t *testing.T) {
 	assert.Nil(t, parser.ParseAdvertisement())
 	assert.Equal(t, Unknown, parser.DetectedType)
 }
+
+func TestParseTelemetryFrameOneField(t *testing.T) {
+	bytes, err := hex.DecodeString("07166AFE03020A64")
+	assert.Nil(t, err)
+
+	parser := New(bytes)
+	assert.Nil(t, parser.ParseAdvertisement())
+	assert.Equal(t, KontaktTelemetry, parser.DetectedType)
+
+	if adv, ok := parser.Parsed.(*KontaktTelemetryAdvertisement); !ok {
+		t.Errorf("Parsing of kontakt telemetry should result in KontaktTelemetryAdvertisement")
+	} else {
+		assert.Equal(t, 1, len(adv.Fields))
+		assert.Equal(t, LightLevel, adv.Fields[0].PID)
+		assert.Equal(t, []byte{0x64}, adv.Fields[0].Value)
+	}
+}
+
+func TestParseTelemetryFrameManyFields(t *testing.T) {
+	bytes, err := hex.DecodeString("0C166AFE03020A640411065BA0")
+	assert.Nil(t, err)
+
+	parser := New(bytes)
+	assert.Nil(t, parser.ParseAdvertisement())
+	assert.Equal(t, KontaktTelemetry, parser.DetectedType)
+
+	if adv, ok := parser.Parsed.(*KontaktTelemetryAdvertisement); !ok {
+		t.Errorf("Parsing of kontakt telemetry should result in KontaktTelemetryAdvertisement")
+	} else {
+		assert.Equal(t, 2, len(adv.Fields))
+		assert.Equal(t, LightLevel, adv.Fields[0].PID)
+		assert.Equal(t, []byte{0x64}, adv.Fields[0].Value)
+		assert.Equal(t, ClickInfo, adv.Fields[1].PID)
+		assert.Equal(t, []byte{0x06, 0x5B, 0xA0}, adv.Fields[1].Value)
+	}
+}
+
+func TestParseTelemetryFrameEmpty(t *testing.T) {
+	bytes, err := hex.DecodeString("04166AFE03")
+	assert.Nil(t, err)
+
+	parser := New(bytes)
+	assert.Nil(t, parser.ParseAdvertisement())
+	assert.Equal(t, KontaktTelemetry, parser.DetectedType)
+
+	if adv, ok := parser.Parsed.(*KontaktTelemetryAdvertisement); !ok {
+		t.Errorf("Parsing of kontakt telemetry should result in KontaktTelemetryAdvertisement")
+	} else {
+		assert.Equal(t, 0, len(adv.Fields))
+	}
+}
