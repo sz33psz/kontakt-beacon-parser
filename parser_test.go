@@ -11,9 +11,7 @@ import (
 
 func TestParseIBeacon(t *testing.T) {
 	bytes, err := hex.DecodeString("1AFF4C000215F7826DA64FA24E988024BC5B71E0893E01020304B3")
-	if err != nil {
-		t.Fail()
-	}
+	assert.Nil(t, err)
 
 	parser := New(bytes)
 	assert.Nil(t, parser.ParseAdvertisement())
@@ -29,9 +27,7 @@ func TestParseIBeacon(t *testing.T) {
 }
 func TestParseIBeaconInvalidPreamble(t *testing.T) {
 	bytes, err := hex.DecodeString("1AFFFFFFFFFFF7826DA64FA24E988024BC5B71E0893E01020304B3")
-	if err != nil {
-		t.Fail()
-	}
+	assert.Nil(t, err)
 
 	parser := New(bytes)
 	assert.Nil(t, parser.ParseAdvertisement())
@@ -39,9 +35,7 @@ func TestParseIBeaconInvalidPreamble(t *testing.T) {
 }
 func TestParseIBeaconSmallerFrameLength(t *testing.T) {
 	bytes, err := hex.DecodeString("19FFFFFFFFFFF7826DA64FA24E988024BC5B71E0893E01020304")
-	if err != nil {
-		t.Fail()
-	}
+	assert.Nil(t, err)
 
 	parser := New(bytes)
 	assert.Nil(t, parser.ParseAdvertisement())
@@ -50,9 +44,8 @@ func TestParseIBeaconSmallerFrameLength(t *testing.T) {
 
 func TestParseTooShortIBeacon(t *testing.T) {
 	bytes, err := hex.DecodeString("1AFF4C000215F7826DA64FA24E988024BC5B71E0893E01020304")
-	if err != nil {
-		t.Fail()
-	}
+	assert.Nil(t, err)
+
 	parser := New(bytes)
 	assert.Equal(t, io.EOF, parser.ParseAdvertisement())
 	assert.Equal(t, Unknown, parser.DetectedType)
@@ -60,11 +53,19 @@ func TestParseTooShortIBeacon(t *testing.T) {
 
 func TestParseKontaktInvalidType(t *testing.T) {
 	bytes, err := hex.DecodeString("0F166AFEFF06010F6404616263646566")
-	if err != nil {
-		t.Fail()
-	}
+	assert.Nil(t, err)
+
 	parser := New(bytes)
 	assert.Equal(t, ErrInvalidKontaktPayloadIdentifier, parser.ParseAdvertisement())
+	assert.Equal(t, Unknown, parser.DetectedType)
+}
+
+func TestParseKontaktTooShort(t *testing.T) {
+	bytes, err := hex.DecodeString("02166A")
+	assert.Nil(t, err)
+
+	parser := New(bytes)
+	assert.Equal(t, io.EOF, parser.ParseAdvertisement())
 	assert.Equal(t, Unknown, parser.DetectedType)
 }
 
@@ -80,9 +81,8 @@ func TestParseBlankAdvertisement(t *testing.T) {
 
 func TestParseKontaktPlain(t *testing.T) {
 	bytes, err := hex.DecodeString("0F166AFE0206010F6404616263646566")
-	if err != nil {
-		t.Fail()
-	}
+	assert.Nil(t, err)
+
 	parser := New(bytes)
 	assert.Nil(t, parser.ParseAdvertisement())
 	assert.Equal(t, KontaktPlain, parser.DetectedType)
@@ -97,30 +97,58 @@ func TestParseKontaktPlain(t *testing.T) {
 	}
 }
 
+func TestParseKontaktPlainTooShort(t *testing.T) {
+	bytes, err := hex.DecodeString("09166AFE0206010F6404")
+	assert.Nil(t, err)
+
+	parser := New(bytes)
+	assert.Nil(t, parser.ParseAdvertisement())
+	assert.Equal(t, Unknown, parser.DetectedType)
+}
+
 func TestParseScanResponse(t *testing.T) {
 	bytes, err := hex.DecodeString("080961626364656667020A040A160DD061626364040264")
-	if err != nil {
-		t.Fail()
-	}
+	assert.Nil(t, err)
+
 	parser := New(bytes)
 	assert.Nil(t, parser.ParseScanResponse())
 	assert.Equal(t, KontaktScanResponse, parser.DetectedType)
 	if sr, ok := parser.Parsed.(*KontaktIOScanResponse); !ok {
 		t.Errorf("Parsing of kontakt scan response should result in KontaktIOScanResponse")
 	} else {
+		assert.True(t, sr.HasName)
 		assert.Equal(t, "abcdefg", sr.Name)
+		assert.True(t, sr.HasTxPower)
 		assert.Equal(t, int8(4), sr.TxPower)
+		assert.True(t, sr.HasIdentifier)
 		assert.Equal(t, "abcd", sr.UniqueID)
 		assert.Equal(t, "4.2", sr.Firmware)
 		assert.Equal(t, uint8(100), sr.BatteryLevel)
 	}
 }
 
+func TestParseScanResponseTooShortSection(t *testing.T) {
+	bytes, err := hex.DecodeString("080961626364656667020A0409160DD0616263640402")
+	assert.Nil(t, err)
+
+	parser := New(bytes)
+	assert.Nil(t, parser.ParseScanResponse())
+	assert.Equal(t, KontaktScanResponse, parser.DetectedType)
+	if sr, ok := parser.Parsed.(*KontaktIOScanResponse); !ok {
+		t.Errorf("Parsing of kontakt scan response should result in KontaktIOScanResponse")
+	} else {
+		assert.True(t, sr.HasName)
+		assert.Equal(t, "abcdefg", sr.Name)
+		assert.True(t, sr.HasTxPower)
+		assert.Equal(t, int8(4), sr.TxPower)
+		assert.False(t, sr.HasIdentifier)
+	}
+}
+
 func TestParseLocationFrame(t *testing.T) {
 	bytes, err := hex.DecodeString("0E166AFE05F4250A01414243444546")
-	if err != nil {
-		t.Fail()
-	}
+	assert.Nil(t, err)
+
 	parser := New(bytes)
 	assert.Nil(t, parser.ParseAdvertisement())
 	assert.Equal(t, KontaktLocation, parser.DetectedType)
@@ -134,4 +162,13 @@ func TestParseLocationFrame(t *testing.T) {
 		assert.Equal(t, uint8(1), adv.Flags)
 		assert.Equal(t, "ABCDEF", adv.UniqueID)
 	}
+}
+
+func TestParseLocationFrameTooShort(t *testing.T) {
+	bytes, err := hex.DecodeString("08166AFE05F4250A01")
+	assert.Nil(t, err)
+
+	parser := New(bytes)
+	assert.Nil(t, parser.ParseAdvertisement())
+	assert.Equal(t, Unknown, parser.DetectedType)
 }

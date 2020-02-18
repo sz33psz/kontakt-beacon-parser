@@ -13,10 +13,13 @@ type IBeaconAdvertisement struct {
 // KontaktIOScanResponse is a structure holding data from older Kontakt.io beacon's Scan Response
 type KontaktIOScanResponse struct {
 	Name            string
+	HasName         bool
 	TxPower         int8
+	HasTxPower      bool
 	Firmware        string
 	BatteryLevel    uint8
 	UniqueID        string
+	HasIdentifier   bool
 	ShuffledIBeacon IBeaconAdvertisement
 }
 

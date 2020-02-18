@@ -77,7 +77,6 @@ func New(adv []byte) Parser {
 }
 
 func (p *Parser) ParseScanResponse() error {
-	correctScanResponse := false
 	scanResponse := KontaktIOScanResponse{}
 	for p.buf.Len() > 0 {
 		typ, section, err := p.nextSection()
@@ -87,10 +86,10 @@ func (p *Parser) ParseScanResponse() error {
 		switch typ {
 		case completeNameType:
 			scanResponse.Name = string(section)
-			correctScanResponse = true
+			scanResponse.HasName = true
 		case txPowerType:
 			scanResponse.TxPower = int8(section[0])
-			correctScanResponse = true
+			scanResponse.HasTxPower = true
 		case serviceDataDataType:
 			if !bytes.Equal(section[0:2], kontaktScanResponseUUID) || len(section) != 9 {
 				continue
@@ -98,10 +97,10 @@ func (p *Parser) ParseScanResponse() error {
 			scanResponse.UniqueID = string(section[2:6])
 			scanResponse.Firmware = fmt.Sprintf("%v.%v", section[6], section[7])
 			scanResponse.BatteryLevel = uint8(section[8])
-			correctScanResponse = true
+			scanResponse.HasIdentifier = true
 		}
 	}
-	if correctScanResponse {
+	if scanResponse.HasName || scanResponse.HasTxPower || scanResponse.HasIdentifier {
 		p.Parsed = &scanResponse
 		p.DetectedType = KontaktScanResponse
 	}
@@ -152,9 +151,6 @@ func (p *Parser) ParseAdvertisement() error {
 func (p *Parser) nextSection() (byte, []byte, error) {
 	len, err := p.buf.ReadByte()
 	if err != nil {
-		if err == io.EOF {
-
-		}
 		return 0, nil, err
 	}
 	typ, err := p.buf.ReadByte()
