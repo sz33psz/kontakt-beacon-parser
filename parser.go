@@ -89,7 +89,7 @@ func (p *Parser) ParseScanResponse() error {
 			scanResponse.Name = string(section)
 			correctScanResponse = true
 		case txPowerType:
-			scanResponse.TxPower = uint8(section[0])
+			scanResponse.TxPower = int8(section[0])
 			correctScanResponse = true
 		case serviceDataDataType:
 			if !bytes.Equal(section[0:2], kontaktScanResponseUUID) || len(section) != 9 {
@@ -245,7 +245,25 @@ func (p *Parser) parseKontaktTelemetry(section []byte) error {
 }
 
 func (p *Parser) parseKontaktLocation(section []byte) error {
-	return ErrNotImplemented
+	if len(section) < 8 {
+		return nil
+	}
+
+	txPower := section[3]
+	bleChannel := section[4]
+	model := section[5]
+	flags := section[6]
+	uniqueID := string(section[7:])
+
+	p.Parsed = &KontaktLocationAdvertisement{
+		TxPower:     int8(txPower),
+		BleChannel:  uint8(bleChannel),
+		DeviceModel: uint8(model),
+		Flags:       uint8(flags),
+		UniqueID:    uniqueID,
+	}
+	p.DetectedType = KontaktLocation
+	return nil
 }
 
 func (p *Parser) parseEddystone(section []byte) error {

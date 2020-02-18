@@ -68,6 +68,16 @@ func TestParseKontaktInvalidType(t *testing.T) {
 	assert.Equal(t, Unknown, parser.DetectedType)
 }
 
+func TestParseBlankAdvertisement(t *testing.T) {
+	// It can cause infinite loop when reading 0xFF as -1
+	bytes, err := hex.DecodeString("FFFFFFFFFFFFFFFFFFFFFF")
+	assert.Nil(t, err)
+
+	parser := New(bytes)
+	assert.Equal(t, io.EOF, parser.ParseAdvertisement())
+	assert.Equal(t, Unknown, parser.DetectedType)
+}
+
 func TestParseKontaktPlain(t *testing.T) {
 	bytes, err := hex.DecodeString("0F166AFE0206010F6404616263646566")
 	if err != nil {
@@ -95,4 +105,33 @@ func TestParseScanResponse(t *testing.T) {
 	parser := New(bytes)
 	assert.Nil(t, parser.ParseScanResponse())
 	assert.Equal(t, KontaktScanResponse, parser.DetectedType)
+	if sr, ok := parser.Parsed.(*KontaktIOScanResponse); !ok {
+		t.Errorf("Parsing of kontakt scan response should result in KontaktIOScanResponse")
+	} else {
+		assert.Equal(t, "abcdefg", sr.Name)
+		assert.Equal(t, int8(4), sr.TxPower)
+		assert.Equal(t, "abcd", sr.UniqueID)
+		assert.Equal(t, "4.2", sr.Firmware)
+		assert.Equal(t, uint8(100), sr.BatteryLevel)
+	}
+}
+
+func TestParseLocationFrame(t *testing.T) {
+	bytes, err := hex.DecodeString("0E166AFE05F4250A01414243444546")
+	if err != nil {
+		t.Fail()
+	}
+	parser := New(bytes)
+	assert.Nil(t, parser.ParseAdvertisement())
+	assert.Equal(t, KontaktLocation, parser.DetectedType)
+
+	if adv, ok := parser.Parsed.(*KontaktLocationAdvertisement); !ok {
+		t.Errorf("Parsing of kontakt location should result in KontaktLocationAdvertisement")
+	} else {
+		assert.Equal(t, int8(-12), adv.TxPower)
+		assert.Equal(t, uint8(37), adv.BleChannel)
+		assert.Equal(t, uint8(10), adv.DeviceModel)
+		assert.Equal(t, uint8(1), adv.Flags)
+		assert.Equal(t, "ABCDEF", adv.UniqueID)
+	}
 }
