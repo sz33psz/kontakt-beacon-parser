@@ -20,12 +20,12 @@ func assertions(value KontaktTelemetryValue, pid TelemetryPID, length int) error
 	return nil
 }
 
-type SystemHealthParser struct {
+type SystemHealthFieldParser struct {
 	UnixTimestamp uint32
 	BatteryLevel  uint8
 }
 
-func (p *SystemHealthParser) Parse(value KontaktTelemetryValue) error {
+func (p *SystemHealthFieldParser) Parse(value KontaktTelemetryValue) error {
 	if err := assertions(value, SystemHealth, 5); err != nil {
 		return err
 	}
@@ -97,5 +97,136 @@ func (p *MovementFieldParser) Parse(value KontaktTelemetryValue) error {
 		return err
 	}
 	p.SecondsSinceThreshold = binary.LittleEndian.Uint16(value.Value)
+	return nil
+}
+
+type DoubleTapFieldParser struct {
+	SecondsSinceDoubleTap uint16
+}
+
+func (p *DoubleTapFieldParser) Parse(value KontaktTelemetryValue) error {
+	if err := assertions(value, DoubleTap, 2); err != nil {
+		return err
+	}
+	p.SecondsSinceDoubleTap = binary.LittleEndian.Uint16(value.Value)
+	return nil
+}
+
+type LightLevelFieldParser struct {
+	LightLevel uint8
+}
+
+func (p *LightLevelFieldParser) Parse(value KontaktTelemetryValue) error {
+	if err := assertions(value, LightLevel, 1); err != nil {
+		return err
+	}
+	p.LightLevel = uint8(value.Value[0])
+	return nil
+}
+
+type Temperature8BitFieldParser struct {
+	Temperature int8
+}
+
+func (p *Temperature8BitFieldParser) Parse(value KontaktTelemetryValue) error {
+	if err := assertions(value, Temperature8Bit, 1); err != nil {
+		return err
+	}
+	p.Temperature = int8(value.Value[0])
+	return nil
+}
+
+type Temperature16BitFieldParser struct {
+	Temperature float32
+}
+
+func (p *Temperature16BitFieldParser) Parse(value KontaktTelemetryValue) error {
+	if err := assertions(value, Temperature16Bit, 2); err != nil {
+		return err
+	}
+	decimal := float32(value.Value[1]) / 256
+	p.Temperature = float32(int8(value.Value[0]))
+	if p.Temperature > 0 {
+		p.Temperature += decimal
+	} else {
+		p.Temperature -= decimal
+	}
+
+	return nil
+}
+
+type BatteryFieldParser struct {
+	BatteryLevel uint8
+}
+
+func (p *BatteryFieldParser) Parse(value KontaktTelemetryValue) error {
+	if err := assertions(value, BatteryLevel, 1); err != nil {
+		return err
+	}
+	p.BatteryLevel = uint8(value.Value[0])
+	return nil
+}
+
+type ClickFieldParser struct {
+	SecondsSinceClick uint16
+}
+
+func (p *ClickFieldParser) Parse(value KontaktTelemetryValue) error {
+	if err := assertions(value, Click, 2); err != nil {
+		return err
+	}
+	p.SecondsSinceClick = binary.LittleEndian.Uint16(value.Value)
+	return nil
+}
+
+type ClickInfoFieldParser struct {
+	ClickID           uint8
+	SecondsSinceClick uint16
+}
+
+func (p *ClickInfoFieldParser) Parse(value KontaktTelemetryValue) error {
+	if err := assertions(value, ClickInfo, 3); err != nil {
+		return err
+	}
+	p.ClickID = uint8(value.Value[0])
+	p.SecondsSinceClick = binary.LittleEndian.Uint16(value.Value[1:])
+	return nil
+}
+
+type UTCTimeFieldParser struct {
+	UTCTime uint32
+}
+
+func (p *UTCTimeFieldParser) Parse(value KontaktTelemetryValue) error {
+	if err := assertions(value, UTCTime, 4); err != nil {
+		return err
+	}
+	p.UTCTime = binary.LittleEndian.Uint32(value.Value)
+	return nil
+}
+
+type HumidityFieldParser struct {
+	Humidity uint8
+}
+
+func (p *HumidityFieldParser) Parse(value KontaktTelemetryValue) error {
+	if err := assertions(value, Humidity, 1); err != nil {
+		return err
+	}
+	p.Humidity = uint8(value.Value[0])
+	return nil
+}
+
+type MovementInfoFieldParser struct {
+	Counter               uint8
+	SecondsSinceThreshold uint16
+}
+
+func (p *MovementInfoFieldParser) Parse(value KontaktTelemetryValue) error {
+	if err := assertions(value, MovementInfo, 3); err != nil {
+		return err
+	}
+	p.Counter = uint8(value.Value[0])
+	p.SecondsSinceThreshold = binary.LittleEndian.Uint16(value.Value[1:])
 	return nil
 }

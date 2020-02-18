@@ -78,8 +78,8 @@ const (
 	Temperature16Bit TelemetryPID = 0x13
 	// BatteryLevel - simple field https://developer.kontakt.io/hardware/packets/telemetry/#battery
 	BatteryLevel TelemetryPID = 0x0C
-	// TimeSinceClick - simple field https://developer.kontakt.io/hardware/packets/telemetry/#button-click
-	TimeSinceClick TelemetryPID = 0x0D
+	// Click - simple field https://developer.kontakt.io/hardware/packets/telemetry/#button-click
+	Click TelemetryPID = 0x0D
 	// ClickInfo - simple field https://developer.kontakt.io/hardware/packets/telemetry/#button-click-counter
 	ClickInfo TelemetryPID = 0x11
 	// UTCTime - simple field https://developer.kontakt.io/hardware/packets/telemetry/#utc-time
