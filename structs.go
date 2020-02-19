@@ -40,6 +40,7 @@ type KontaktShuffledAdvertisement struct {
 	FirmwareMajor       uint8
 	FirmwareMinor       uint8
 	BatteryLevel        uint8
+	TxPower             int8
 	EddystoneNamespace  []byte
 	EddystoneInstanceID []byte
 }

@@ -223,3 +223,52 @@ func TestParseTelemetryFrameEmpty(t *testing.T) {
 		assert.Equal(t, 0, len(adv.Fields))
 	}
 }
+
+func TestParseEddystoneUID(t *testing.T) {
+	bytes, err := hex.DecodeString("1716AAFE0004010203040506070809000102030405060000")
+	assert.Nil(t, err)
+
+	parser := New(bytes)
+	assert.Nil(t, parser.ParseAdvertisement())
+	assert.Equal(t, EddystoneUID, parser.DetectedType)
+
+	if adv, ok := parser.Parsed.(*EddystoneUIDPacket); !ok {
+		t.Errorf("Parsing of eddystone uid should result in EddystoneUIDPacket")
+	} else {
+		assert.Equal(t, int8(4), adv.TxPower0M)
+		assert.Equal(t, []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x00}, adv.Namespace)
+		assert.Equal(t, []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06}, adv.InstanceId)
+	}
+}
+
+func TestEddystoneURL(t *testing.T) {
+	bytes, err := hex.DecodeString("0B16AAFE100403746573740C")
+	assert.Nil(t, err)
+
+	parser := New(bytes)
+	assert.Nil(t, parser.ParseAdvertisement())
+	assert.Equal(t, EddystoneURL, parser.DetectedType)
+
+	if adv, ok := parser.Parsed.(*EddystoneURLPacket); !ok {
+		t.Errorf("Parsing of eddystone url should result in EddystoneURLPacket")
+	} else {
+		assert.Equal(t, int8(4), adv.TxPower0M)
+		assert.Equal(t, "https://test.biz", adv.URL)
+	}
+}
+
+func TestEddystoneURL2(t *testing.T) {
+	bytes, err := hex.DecodeString("0F16AAFE100400746573740674657374")
+	assert.Nil(t, err)
+
+	parser := New(bytes)
+	assert.Nil(t, parser.ParseAdvertisement())
+	assert.Equal(t, EddystoneURL, parser.DetectedType)
+
+	if adv, ok := parser.Parsed.(*EddystoneURLPacket); !ok {
+		t.Errorf("Parsing of eddystone url should result in EddystoneURLPacket")
+	} else {
+		assert.Equal(t, int8(4), adv.TxPower0M)
+		assert.Equal(t, "http://www.test.gov/test", adv.URL)
+	}
+}

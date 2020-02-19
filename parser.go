@@ -48,6 +48,7 @@ var (
 	ErrInvalidKontaktPayloadIdentifier = errors.New("invalid kontakt payload identidier")
 	ErrNotImplemented                  = errors.New("packet not supported yet")
 	ErrInvalidLength                   = errors.New("packet has invalid length")
+	ErrInvalidURL                      = errors.New("invalid eddystone url")
 )
 
 var (
@@ -214,26 +215,33 @@ func (p *Parser) parseKontaktPlain(section []byte) error {
 	if len(section) < 9 {
 		return nil
 	}
-	deviceModel := section[3]
-	fwMajor := section[4]
-	fwMinor := section[5]
-	battery := section[6]
-	txPower := section[7]
-	uniqueID := string(section[8:])
 	p.Parsed = &KontaktPlainAdvertisement{
-		DeviceModel:   uint8(deviceModel),
-		FirmwareMajor: uint8(fwMajor),
-		FirmwareMinor: uint8(fwMinor),
-		BatteryLevel:  uint8(battery),
-		TxPower:       int8(txPower),
-		UniqueID:      uniqueID,
+		DeviceModel:   uint8(section[3]),
+		FirmwareMajor: uint8(section[4]),
+		FirmwareMinor: uint8(section[5]),
+		BatteryLevel:  uint8(section[6]),
+		TxPower:       int8(section[7]),
+		UniqueID:      string(section[8:]),
 	}
 	p.DetectedType = KontaktPlain
 	return nil
 }
 
 func (p *Parser) parseKontaktShuffled(section []byte) error {
-	return ErrNotImplemented
+	if len(section) != 23 {
+		return nil
+	}
+	p.Parsed = &KontaktShuffledAdvertisement{
+		DeviceModel:         uint8(section[3]),
+		FirmwareMajor:       uint8(section[4]),
+		FirmwareMinor:       uint8(section[5]),
+		BatteryLevel:        uint8(section[6]),
+		TxPower:             int8(section[7]),
+		EddystoneNamespace:  section[8:18],
+		EddystoneInstanceID: section[18:24],
+	}
+	p.DetectedType = KontaktShuffled
+	return nil
 }
 
 func (p *Parser) parseKontaktTelemetry(section []byte) error {
@@ -287,5 +295,95 @@ func (p *Parser) parseKontaktLocation(section []byte) error {
 }
 
 func (p *Parser) parseEddystone(section []byte) error {
+	if len(section) < 3 {
+		return io.EOF
+	}
+	var err error
+	switch section[2] {
+	case 0x00:
+		err = p.parseEddystoneUID(section)
+	case 0x10:
+		err = p.parseEddystoneURL(section)
+	case 0x20:
+		err = p.parseEddystoneTLM(section)
+	case 0x30:
+		err = p.parseEddystoneEID(section)
+	}
+	return err
+}
+
+func (p *Parser) parseEddystoneUID(section []byte) error {
+	if len(section) != 22 {
+		return io.EOF
+	}
+	p.Parsed = &EddystoneUIDPacket{
+		TxPower0M:  int8(section[3]),
+		Namespace:  section[4:14],
+		InstanceId: section[14:20],
+	}
+	p.DetectedType = EddystoneUID
+	return nil
+}
+
+var eddystoneUrlPrefixes = map[byte][]byte{
+	0x00: []byte("http://www."),
+	0x01: []byte("https://www."),
+	0x02: []byte("http://"),
+	0x03: []byte("https://"),
+}
+
+var eddystoneUrlReplacements = map[byte][]byte{
+	0x00: []byte(".com/"),
+	0x01: []byte(".org/"),
+	0x02: []byte(".edu/"),
+	0x03: []byte(".net/"),
+	0x04: []byte(".info/"),
+	0x05: []byte(".biz/"),
+	0x06: []byte(".gov/"),
+	0x07: []byte(".com"),
+	0x08: []byte(".org"),
+	0x09: []byte(".edu"),
+	0x0A: []byte(".net"),
+	0x0B: []byte(".info"),
+	0x0C: []byte(".biz"),
+	0x0D: []byte(".gov"),
+}
+
+func (p *Parser) parseEddystoneURL(section []byte) error {
+	if len(section) < 6 {
+		return io.EOF
+	}
+	txPower := int8(section[3])
+	url := make([]byte, 0)
+	if prefix, ok := eddystoneUrlPrefixes[section[4]]; ok {
+		url = append(url, prefix...)
+	} else {
+		return ErrInvalidURL
+	}
+	for i := 5; i < len(section); i++ {
+		b := section[i]
+		if b >= 0x20 && b <= 0x7F {
+			url = append(url, b)
+			continue
+		}
+		if replacement, ok := eddystoneUrlReplacements[b]; ok {
+			url = append(url, replacement...)
+		} else {
+			return ErrInvalidURL
+		}
+	}
+	p.Parsed = &EddystoneURLPacket{
+		TxPower0M: txPower,
+		URL:       string(url),
+	}
+	p.DetectedType = EddystoneURL
+	return nil
+}
+
+func (p *Parser) parseEddystoneTLM(section []byte) error {
+	return ErrNotImplemented
+}
+
+func (p *Parser) parseEddystoneEID(section []byte) error {
 	return ErrNotImplemented
 }
