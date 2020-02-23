@@ -272,3 +272,54 @@ func TestEddystoneURL2(t *testing.T) {
 		assert.Equal(t, "http://www.test.gov/test", adv.URL)
 	}
 }
+
+func TestEddystoneTLM(t *testing.T) {
+	bytes, err := hex.DecodeString("1116AAFE2000018005400000010000010000")
+	assert.Nil(t, err)
+
+	parser := New(bytes)
+	assert.Nil(t, parser.ParseAdvertisement())
+	assert.Equal(t, EddystoneTLM, parser.DetectedType)
+
+	if adv, ok := parser.Parsed.(*EddystonePlainTLMPacket); !ok {
+		t.Errorf("Parsing of eddystone tlm should result in EddystonePlainTLMPacket")
+	} else {
+		assert.Equal(t, uint16(384), adv.BatteryVoltage)
+		assert.Equal(t, float64(5.25), adv.Temperature)
+		assert.Equal(t, uint32(256), adv.AdvertisementCount)
+		assert.Equal(t, float64(6553.6), adv.TimeSincePowerOn)
+	}
+}
+
+func TestEddystoneETLM(t *testing.T) {
+	bytes, err := hex.DecodeString("1516AAFE20010102030405060708090A0B0C01021112")
+	assert.Nil(t, err)
+
+	parser := New(bytes)
+	assert.Nil(t, parser.ParseAdvertisement())
+	assert.Equal(t, EddystoneETLM, parser.DetectedType)
+
+	if adv, ok := parser.Parsed.(*EddystoneEncryptedTLMPacket); !ok {
+		t.Errorf("Parsing of eddystone tlm should result in EddystoneEncryptedTLMPacket")
+	} else {
+		assert.Equal(t, []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C}, adv.Telemetry)
+		assert.Equal(t, []byte{0x01, 0x02}, adv.Salt)
+		assert.Equal(t, []byte{0x11, 0x12}, adv.MIC)
+	}
+}
+
+func TestEddystoneEID(t *testing.T) {
+	bytes, err := hex.DecodeString("0D16AAFE30045152535455565758")
+	assert.Nil(t, err)
+
+	parser := New(bytes)
+	assert.Nil(t, parser.ParseAdvertisement())
+	assert.Equal(t, EddystoneEID, parser.DetectedType)
+
+	if adv, ok := parser.Parsed.(*EddystoneEIDPacket); !ok {
+		t.Errorf("Parsing of eddystone eid should result in EddystoneEIDPacket")
+	} else {
+		assert.Equal(t, int8(4), adv.TxPower0M)
+		assert.Equal(t, []byte{0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58}, adv.EID)
+	}
+}

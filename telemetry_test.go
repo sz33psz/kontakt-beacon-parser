@@ -141,7 +141,7 @@ func TestTemperature8BitWrongPID(t *testing.T) {
 }
 
 func TestTemperature16BitField(t *testing.T) {
-	tlm := buildField(t, Temperature16Bit, "FE80")
+	tlm := buildField(t, Temperature16Bit, "FD80")
 	field := Temperature16BitFieldParser{}
 	assert.Nil(t, field.Parse(tlm))
 

@@ -144,13 +144,7 @@ func (p *Temperature16BitFieldParser) Parse(value KontaktTelemetryValue) error {
 	if err := assertions(value, Temperature16Bit, 2); err != nil {
 		return err
 	}
-	decimal := float32(value.Value[1]) / 256
-	p.Temperature = float32(int8(value.Value[0]))
-	if p.Temperature > 0 {
-		p.Temperature += decimal
-	} else {
-		p.Temperature -= decimal
-	}
+	p.Temperature = float32((int16(value.Value[0])<<8)+int16(value.Value[1])) / 256
 
 	return nil
 }

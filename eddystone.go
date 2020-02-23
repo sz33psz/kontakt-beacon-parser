@@ -13,9 +13,9 @@ type EddystoneURLPacket struct {
 
 type EddystonePlainTLMPacket struct {
 	BatteryVoltage     uint16
-	Temperature        float32
+	Temperature        float64
 	AdvertisementCount uint32
-	TimeSincePowerOn   uint32
+	TimeSincePowerOn   float64
 }
 
 type EddystoneEncryptedTLMPacket struct {

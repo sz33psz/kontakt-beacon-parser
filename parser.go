@@ -381,9 +381,54 @@ func (p *Parser) parseEddystoneURL(section []byte) error {
 }
 
 func (p *Parser) parseEddystoneTLM(section []byte) error {
-	return ErrNotImplemented
+	if len(section) < 4 {
+		return io.EOF
+	}
+	var err error
+	switch section[3] {
+	case 0x00:
+		err = p.parseEddystonePlainTLM(section)
+	case 0x01:
+		err = p.parseEddystoneEncryptedTLM(section)
+	}
+	return err
+}
+
+func (p *Parser) parseEddystonePlainTLM(section []byte) error {
+	if len(section) != 16 {
+		return io.EOF
+	}
+	p.Parsed = &EddystonePlainTLMPacket{
+		BatteryVoltage:     binary.BigEndian.Uint16(section[4:6]),
+		Temperature:        float64((int16(section[6])<<8)+int16(section[7])) / 256,
+		AdvertisementCount: binary.BigEndian.Uint32(section[8:12]),
+		TimeSincePowerOn:   float64(binary.BigEndian.Uint32(section[12:16])) / 10,
+	}
+	p.DetectedType = EddystoneTLM
+	return nil
+}
+
+func (p *Parser) parseEddystoneEncryptedTLM(section []byte) error {
+	if len(section) != 20 {
+		return io.EOF
+	}
+	p.Parsed = &EddystoneEncryptedTLMPacket{
+		Telemetry: section[4:16],
+		Salt:      section[16:18],
+		MIC:       section[18:20],
+	}
+	p.DetectedType = EddystoneETLM
+	return nil
 }
 
 func (p *Parser) parseEddystoneEID(section []byte) error {
-	return ErrNotImplemented
+	if len(section) != 12 {
+		return io.EOF
+	}
+	p.Parsed = &EddystoneEIDPacket{
+		TxPower0M: int8(section[3]),
+		EID:       section[4:12],
+	}
+	p.DetectedType = EddystoneEID
+	return nil
 }
